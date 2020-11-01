@@ -18,8 +18,42 @@ spec:
       containers:
       - name: redis
         image: redis:6.0.4-alpine
+        command:
+          - redis-server
+          - /redis-master/redis.conf
+        volumeMounts:
+          - mountPath: /redis-master
+            name: config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "redis-cli -h $(hostname) ping"
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "redis-cli -h $(hostname) ping"
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "64Mi"
+          limits:
+            cpu: "500m"
+            memory: "128Mi"
         ports:
         - containerPort: 6379
+      volumes:
+        - name: config
+          secret:
+            secretName: secret-redis-password
+            items:
+            - key: redis.conf
+              path: redis.conf
 ---
 apiVersion: v1
 kind: Service
@@ -34,3 +68,4 @@ spec:
     targetPort: 6379
   selector:
     app: redis
+
